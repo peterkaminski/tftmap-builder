@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 
+# set up logging
+import logging, os
+logging.basicConfig(level=os.environ.get('LOGLEVEL', 'WARNING').upper())
+
+# python libraries
 import json
 import sys
 import traceback
 
+# pip install
 from mistletoe import Document
 from mistletoe.ast_renderer import ASTRenderer
 
@@ -56,7 +62,7 @@ def get_listitem_sublist(listitem):
 
 def parse_profile(ast):
     ast = json.loads(ast)
-    elements = ast['children']
+    elements = ast[CHILDREN]
 
     # get name from H1
     elements, heading = get_next_heading(elements, 1)
@@ -85,7 +91,7 @@ def parse_profile(ast):
     # find a list
     print("\n\ntools and ratings")
     elements, list = get_next(elements, LIST)
-    tools = list['children']
+    tools = list[CHILDREN]
     while tools:
         tools, tool = get_next(tools, LISTITEM)
         print(f"tool string: {get_listitem_content(tool)}")
