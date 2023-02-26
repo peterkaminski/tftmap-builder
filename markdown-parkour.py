@@ -6,6 +6,7 @@ logging.basicConfig(level=os.environ.get('LOGLEVEL', 'WARNING').upper())
 
 # python libraries
 import json
+import re
 import sys
 import traceback
 
@@ -60,6 +61,10 @@ def get_listitem_content(listitem):
 def get_listitem_sublist(listitem):
     return listitem[CHILDREN][1:][0]
 
+def get_links(s):
+    link_re = re.compile(r"\[\[ *([^\]]+) *\]\]")
+    return re.findall(link_re, s)
+
 def parse_profile(ast):
     ast = json.loads(ast)
     elements = ast[CHILDREN]
@@ -83,7 +88,9 @@ def parse_profile(ast):
     listitems = list[CHILDREN]
     while listitems:
         listitems, listitem = get_next(listitems, LISTITEM)
-        logging.info(f"tool or practice sentence: {get_listitem_content(listitem)}")
+        torp_sentence = get_listitem_content(listitem)
+        logging.info(f"tool or practice sentence: {torp_sentence}")
+        torps = get_links(torp_sentence)
 
     # find specific H2 heading
     elements, heading = get_next_heading(elements, 2, 'Thinking Tool Ratings')
