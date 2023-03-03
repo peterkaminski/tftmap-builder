@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# TftMap Builder
+
 # set up logging
 import logging, os
 logging.basicConfig(level=os.environ.get('LOGLEVEL', 'WARNING').upper())
@@ -33,6 +35,12 @@ class ParseError(Exception):
 # global variables
 profile = {}
 torps = set()
+
+# set up argparse
+def init_argparse():
+    parser = argparse.ArgumentParser(description='Read Profiles, build Tools and Practices pages.')
+    parser.add_argument('--directory', '-d', required=True, help='directory of source Markdown files')
+    return parser
 
 # search for next element of type='type', and optionally, content matching 'content'
 def get_next(elements, type, content=None):
@@ -110,6 +118,12 @@ def parse_profile(ast):
             logging.info(f"rating string: {get_listitem_content(rating)}")
 
 def main():
+    logging.debug("Initializing")
+
+    argparser = init_argparse();
+    args = argparser.parse_args();
+    logging.debug("args: %s", args)
+
     try:
         # process all files in argv
         for filename in sys.argv[1:]:
@@ -124,7 +138,6 @@ def main():
         sys.exit(1)
     except Exception as err:
         traceback.print_exc(err)
-#        sys.stderr.write("\n\nError: {}\n\n".format(err));
 
 if __name__ == "__main__":
     exit(main())
