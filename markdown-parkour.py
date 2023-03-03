@@ -30,7 +30,9 @@ LEVEL = 'level'
 class ParseError(Exception):
     pass
 
+# global variables
 profile = {}
+torps = set()
 
 # search for next element of type='type', and optionally, content matching 'content'
 def get_next(elements, type, content=None):
@@ -90,7 +92,7 @@ def parse_profile(ast):
         listitems, listitem = get_next(listitems, LISTITEM)
         torp_sentence = get_listitem_content(listitem)
         logging.info(f"tool or practice sentence: {torp_sentence}")
-        torps = get_links(torp_sentence)
+        torps.update(get_links(torp_sentence))
 
     # find specific H2 heading
     elements, heading = get_next_heading(elements, 2, 'Thinking Tool Ratings')
@@ -116,6 +118,7 @@ def main():
                     doc = Document(infile.readlines())
                     ast = renderer.render(doc)
                     parse_profile(ast)
+                    print(f"\n\nAll Tools and Practices\n{torps}")
     except ParseError as err:
         sys.stderr.write("\n\nParse error: {}.\n\n".format(err));
         sys.exit(1)
