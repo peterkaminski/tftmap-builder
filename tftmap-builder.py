@@ -7,7 +7,9 @@ import logging, os
 logging.basicConfig(level=os.environ.get('LOGLEVEL', 'WARNING').upper())
 
 # python libraries
+import argparse
 import json
+from pathlib import Path
 import re
 import sys
 import traceback
@@ -117,6 +119,30 @@ def parse_profile(ast):
             ratings, rating = get_next(ratings, LISTITEM)
             logging.info(f"rating string: {get_listitem_content(rating)}")
 
+def read_torp_file(filename):
+    torps = []
+
+    with open(filename, 'r') as infile:
+        with ASTRenderer() as renderer:
+            doc = Document(infile.readlines())
+            ast = renderer.render(doc)
+
+    ast = json.loads(ast)
+    elements = ast[CHILDREN]
+
+    # find a list
+    elements, list = get_next(elements, LIST)
+    listitems = list[CHILDREN]
+    while listitems:
+        listitems, listitem = get_next(listitems, LISTITEM)
+        # get target from first link
+        targets = get_links(get_listitem_content(listitem))
+        if len(targets):
+               torps.append(targets[0])
+
+    # all done
+    return torps
+
 def main():
     logging.debug("Initializing")
 
@@ -124,15 +150,25 @@ def main():
     args = argparser.parse_args();
     logging.debug("args: %s", args)
 
+    # remember paths
+    dir_map = os.path.abspath(args.directory)
+
     try:
+        # get existing torps
+        tools = read_torp_file(Path(dir_map) / "Tools.md")
+        print(f"tools: {tools}")
+        practices = read_torp_file(Path(dir_map) / "Practices.md")
+        print(f"practices: {practices}")
+
         # process all files in argv
-        for filename in sys.argv[1:]:
+        for filename in Path(dir_map).glob('*.md'):
             with open(filename, 'r') as infile:
                 with ASTRenderer() as renderer:
                     doc = Document(infile.readlines())
                     ast = renderer.render(doc)
-                    parse_profile(ast)
-                    print(f"\n\nAll Tools and Practices\n{torps}")
+                    #parse_profile(ast)
+                    #print(f"\n\nAll Tools and Practices\n{torps}")
+                    print(filename)
     except ParseError as err:
         sys.stderr.write("\n\nParse error: {}.\n\n".format(err));
         sys.exit(1)
