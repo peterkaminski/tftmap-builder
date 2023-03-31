@@ -179,11 +179,12 @@ def main():
     try:
         # get existing torps
         tools = read_torp_file(Path(dir_map) / "Tools.md")
-        print(f"tools: {tools}")
+        print(f"\n\n## Existing Index of Tools\n\n{tools}\n\n")
         practices = read_torp_file(Path(dir_map) / "Practices.md")
-        print(f"practices: {practices}")
+        print(f"## Existing Index of Practices\n\n{practices}\n\n")
 
         # process all files in argv
+        print("## Files\n")
         for filename in Path(dir_map).glob('*.md'):
             with open(filename, 'r') as infile:
                 with ASTRenderer() as renderer:
@@ -192,8 +193,14 @@ def main():
                     profile = parse_profile(ast)
                     if profile is not None:
                         print("PROFILE")
-                    #print(f"\n\nAll Tools and Practices\n{torps}")
                     print(filename)
+
+        # now we have all tools or practices, and sentences
+        print(f"\n\n## All Tools or Practices\n\n{torps}")
+        print("\n\n## Torp Sentences\n")
+        from pprint import pprint
+        pprint(torp_sentences)
+
     except ParseError as err:
         sys.stderr.write("\n\nParse error: {}.\n\n".format(err));
         sys.exit(1)
