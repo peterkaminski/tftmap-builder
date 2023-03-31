@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-# TftMap Builder
+# TftMap Builder v1.0.0 - https://github.com/peterkaminski/tftmap-builder
+
+# Copyright 2023 Peter Kaminski. Licensed under MIT license, see accompanying LICENSE file.
 
 # set up logging
 import logging, os
@@ -35,8 +37,8 @@ class ParseError(Exception):
     pass
 
 # global variables
-profile = {}
 torps = set()
+torp_sentences = {}
 
 # set up argparse
 def init_argparse():
@@ -62,10 +64,13 @@ def get_next_heading(elements, level, content=None):
         if heading and heading[LEVEL] == level and (not content or content==get_content(heading)):
             logging.debug(f"found H{level} with content matching '{content}'")
             return elements, heading
-    raise ParseError(f"Heading level {level} not found")
+    return [], None
 
 def get_content(element):
-    return element[CHILDREN][0][CONTENT]
+    try:
+        return element[CHILDREN][0][CONTENT]
+    except Exception as err:
+        raise ParseError(err)
 
 def get_listitem_content(listitem):
     return listitem[CHILDREN][0][CHILDREN][0][CONTENT]
@@ -80,44 +85,62 @@ def get_links(s):
 def parse_profile(ast):
     ast = json.loads(ast)
     elements = ast[CHILDREN]
+    profile = {}
 
     # get name from H1
-    elements, heading = get_next_heading(elements, 1)
+    try:
+        elements, heading = get_next_heading(elements, 1)
+    except ParseError as err:
+        return None
     profile['name'] = get_content(heading)
     logging.info(f"name: {profile['name']}")
 
     # check first paragraph for page type
-    elements, paragraph = get_next(elements, PARAGRAPH)
-    if '[[People]]' not in get_content(paragraph):
-        raise ParseError("Not a profile page")
+    try:
+        elements, paragraph = get_next(elements, PARAGRAPH)
+        content = get_content(paragraph)
+    except ParseError as err:
+        return None
+    if '[[People]]' not in content:
+        return None
 
     # find specific H2 heading
     elements, heading = get_next_heading(elements, 2, 'My current tools and practices')
 
-    # find a list
-    logging.info("\n\ntools or practices")
-    elements, list = get_next(elements, LIST)
-    listitems = list[CHILDREN]
-    while listitems:
-        listitems, listitem = get_next(listitems, LISTITEM)
-        torp_sentence = get_listitem_content(listitem)
-        logging.info(f"tool or practice sentence: {torp_sentence}")
-        torps.update(get_links(torp_sentence))
+    if heading:
+        # find a list
+        logging.info("\n\ntools or practices")
+        elements, list = get_next(elements, LIST)
+        if list:
+            listitems = list[CHILDREN]
+            while listitems:
+                listitems, listitem = get_next(listitems, LISTITEM)
+                torp_sentence = get_listitem_content(listitem)
+                logging.info(f"tool or practice sentence: {torp_sentence}")
+                links = get_links(torp_sentence)
+                torps.update(links)
+                for link in links:
+                    if link not in torp_sentences:
+                        torp_sentences[link] = [torp_sentence]
+                    else:
+                        torp_sentences[link].append(torp_sentence)
 
     # find specific H2 heading
     elements, heading = get_next_heading(elements, 2, 'Thinking Tool Ratings')
     
-    # find a list
-    logging.info("\n\ntools and ratings")
-    elements, list = get_next(elements, LIST)
-    tools = list[CHILDREN]
-    while tools:
-        tools, tool = get_next(tools, LISTITEM)
-        logging.info(f"tool string: {get_listitem_content(tool)}")
-        ratings = get_listitem_sublist(tool)[CHILDREN]
-        while ratings:
-            ratings, rating = get_next(ratings, LISTITEM)
-            logging.info(f"rating string: {get_listitem_content(rating)}")
+    if heading:
+        # find a list
+        logging.info("\n\ntools and ratings")
+        elements, list = get_next(elements, LIST)
+        if list:
+            tools = list[CHILDREN]
+            while tools:
+                tools, tool = get_next(tools, LISTITEM)
+                logging.info(f"tool string: {get_listitem_content(tool)}")
+                ratings = get_listitem_sublist(tool)[CHILDREN]
+                while ratings:
+                    ratings, rating = get_next(ratings, LISTITEM)
+                    logging.info(f"rating string: {get_listitem_content(rating)}")
 
 def read_torp_file(filename):
     torps = []
@@ -166,13 +189,16 @@ def main():
                 with ASTRenderer() as renderer:
                     doc = Document(infile.readlines())
                     ast = renderer.render(doc)
-                    #parse_profile(ast)
+                    profile = parse_profile(ast)
+                    if profile is not None:
+                        print("PROFILE")
                     #print(f"\n\nAll Tools and Practices\n{torps}")
                     print(filename)
     except ParseError as err:
         sys.stderr.write("\n\nParse error: {}.\n\n".format(err));
         sys.exit(1)
     except Exception as err:
+        print(f"TORP_SENTENCES\n\n{torp_sentences}\n====\n")
         traceback.print_exc(err)
 
 if __name__ == "__main__":
