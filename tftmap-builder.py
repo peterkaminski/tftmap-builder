@@ -121,9 +121,9 @@ def parse_profile(ast):
                 torps.update(links)
                 for link in links:
                     if link not in torp_sentences:
-                        torp_sentences[link] = [torp_sentence]
+                        torp_sentences[link] = [[profile['name'],torp_sentence]]
                     else:
-                        torp_sentences[link].append(torp_sentence)
+                        torp_sentences[link].append([profile['name'], torp_sentence])
 
     # find specific H2 heading
     elements, heading = get_next_heading(elements, 2, 'Thinking Tool Ratings')
